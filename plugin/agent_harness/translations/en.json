@@ -1,0 +1,21 @@
+{
+  "settings.default_agent.label": "Default agent",
+  "settings.default_agent.description": "Which agent the composer opens with.",
+  "settings.agent.pi": "Pi",
+  "settings.agent.hermes": "Hermes",
+  "settings.terminal.label": "Terminal",
+  "settings.terminal.kitty": "kitty",
+  "settings.terminal.ghostty": "Ghostty",
+  "settings.terminal.alacritty": "Alacritty",
+  "settings.default_cwd.label": "Default working directory",
+  "settings.default_cwd.description": "Where the agent starts. Pi keeps a separate session per directory.",
+  "settings.window_class.label": "Window class",
+  "settings.window_class.description": "Hyprland window class used to match the pop-out window rule.",
+  "settings.float_window.label": "Float the pop-out window",
+  "settings.float_width.label": "Window width",
+  "settings.float_height.label": "Window height",
+  "settings.approve_project_files.label": "Trust project files",
+  "settings.approve_project_files.description": "Off by default. Passing --approve lets Pi act on project-local instructions without asking.",
+  "settings.widget.agent.label": "Agent for this widget",
+  "settings.widget.show_label.label": "Show agent name"
+}

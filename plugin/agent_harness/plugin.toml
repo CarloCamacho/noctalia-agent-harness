@@ -1,0 +1,122 @@
+# Agent Harness — hotkey a chat bar, then pop out into an agent TUI seeded with your prompt.
+#
+# Launch path (verified on Hyprland 0.56.2, Lua config):
+#   the panel writes a prompt file + a per-launch shell script, applies a runtime window rule
+#   for the window class below, then calls
+#     hyprctl dispatch 'hl.dsp.exec_cmd("sh <generated-script>")'
+#   The legacy `hyprctl dispatch exec [float;size ...] cmd` form is rejected on this version.
+
+id          = "carlocamacho/agent-harness"
+name        = "Agent Harness"
+icon        = "robot"
+version     = "0.1.0"
+plugin_api  = 24
+author      = "carlocamacho"
+license     = "MIT"
+# External commands the plugin expects on PATH (metadata only; not a hard gate).
+dependencies = ["hyprctl", "kitty"]
+tags         = ["ai", "development", "productivity", "panel", "service"]
+description  = "Open a chat composer from a hotkey; pressing Enter pops out a terminal running Pi or Hermes seeded with your prompt."
+
+[[setting]]
+key             = "default_agent"
+type            = "select"
+label_key       = "settings.default_agent.label"
+description_key = "settings.default_agent.description"
+default         = "pi"
+options = [
+  { value = "pi",     label_key = "settings.agent.pi" },
+  { value = "hermes", label_key = "settings.agent.hermes" },
+]
+
+[[setting]]
+key       = "terminal"
+type      = "select"
+label_key = "settings.terminal.label"
+default   = "kitty"
+options = [
+  { value = "kitty",     label_key = "settings.terminal.kitty" },
+  { value = "ghostty",   label_key = "settings.terminal.ghostty" },
+  { value = "alacritty", label_key = "settings.terminal.alacritty" },
+]
+
+[[setting]]
+key             = "default_cwd"
+type            = "folder"
+label_key       = "settings.default_cwd.label"
+description_key = "settings.default_cwd.description"
+default         = "~/work"
+
+[[setting]]
+key             = "window_class"
+type            = "string"
+label_key       = "settings.window_class.label"
+description_key = "settings.window_class.description"
+default         = "agent-harness"
+advanced        = true
+
+[[setting]]
+key       = "float_window"
+type      = "bool"
+label_key = "settings.float_window.label"
+default   = true
+
+[[setting]]
+key             = "float_width"
+type            = "int"
+label_key       = "settings.float_width.label"
+default         = 900
+min             = 400
+max             = 4000
+
+[[setting]]
+key             = "float_height"
+type            = "int"
+label_key       = "settings.float_height.label"
+default         = 600
+min             = 300
+max             = 4000
+
+[[setting]]
+key             = "approve_project_files"
+type            = "bool"
+label_key       = "settings.approve_project_files.label"
+description_key = "settings.approve_project_files.description"
+default         = false
+
+[[service]]
+id    = "service"
+entry = "service.luau"
+
+[[widget]]
+id    = "launcher"
+entry = "widget.luau"
+
+  [[widget.setting]]
+  key       = "agent"
+  type      = "select"
+  label_key = "settings.widget.agent.label"
+  default   = "pi"
+  options = [
+    { value = "pi",     label_key = "settings.agent.pi" },
+    { value = "hermes", label_key = "settings.agent.hermes" },
+  ]
+
+  [[widget.setting]]
+  key       = "show_label"
+  type      = "bool"
+  label_key = "settings.widget.show_label.label"
+  default   = false
+
+[[panel]]
+id                       = "compose"
+entry                    = "panel.luau"
+width                    = 680
+height                   = 360
+placement                = "floating"
+position                 = "center"
+keyboard_focus           = "exclusive"
+dismiss_on_outside_click = true
+# Escape is reserved by the host (it always dismisses the panel), so it must not be listed.
+# `alt+Return` runs the one-shot path instead of opening a terminal.
+capture_keys             = ["alt+Return"]
