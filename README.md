@@ -134,9 +134,14 @@ reload, the daemon's PATH is bare, and the launch script has to wrap the agent *
 All three are fixed and pinned by regression tests.
 
 ```bash
-python3 -m unittest discover -s tests    # 25 tests
-luac5.4 -p plugin/agent-harness/*.luau   # syntax
+python3 -m unittest discover -s tests        # 29 tests: quoting, adapters, panel wiring
+lua5.4 tests/lua/panel_render_test.lua       # 18 assertions: real render trees, host stubbed
+luac5.4 -p plugin/agent-harness/*.luau       # syntax
 ```
+
+The Lua harness loads the actual entry script with a stubbed Noctalia host and asserts the tree
+handed to `panel.render()` — which is how the result-view layout is verified without a running
+shell.
 
 ## Settings
 

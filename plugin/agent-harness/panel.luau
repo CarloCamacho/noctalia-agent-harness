@@ -15,6 +15,7 @@ local status = state.emptyStatus()
 local ui_state = {
   agentId = "pi",
   text = "",
+  prompt = "",     -- the submitted prompt, echoed in the result view
   cwd = "",
   model = "",
   provider = "",
@@ -22,6 +23,7 @@ local ui_state = {
   continueSession = false,
   approve = false,
   busy = false,
+  startedAt = nil,
   output = nil,
   error = nil,
   resolved = {},   -- id -> { adapter, path, available }
@@ -140,11 +142,17 @@ local function doOneShot()
   end
 
   ui_state.busy = true
+  ui_state.startedAt = noctalia.nowMs()
+  ui_state.prompt = ui_state.text
+  ui_state.output = nil
   ui_state.error = nil
+  noctalia.setUpdateInterval(1000)
   render()
 
   noctalia.runAsync({ "sh", scriptPath }, function(result)
     ui_state.busy = false
+    ui_state.startedAt = nil
+    noctalia.setUpdateInterval(60000) -- stop ticking once the run is done
     if result == nil then
       ui_state.error = "one-shot run failed"
     elseif result.timedOut then
@@ -153,6 +161,9 @@ local function doOneShot()
       ui_state.error = tostring(result.stderr or "agent exited with an error")
     else
       ui_state.output = result.stdout or ""
+      if ui_state.output == "" then
+        ui_state.error = "the agent returned no output"
+      end
     end
     render()
   end, 120000)
@@ -160,7 +171,73 @@ end
 
 -- ── render ───────────────────────────────────────────────────────────────────
 
+-- Result view: the answer owns the panel. The composer collapses to a single header row so a
+-- long answer is not squeezed into a few pixels.
+local function renderResult(entry, label)
+  local children = {
+    ui.row({ gap = 8, align = "center" }, {
+      ui.glyph({ name = entry and entry.adapter.glyph or "robot", size = 15, color = "primary" }),
+      ui.label({ text = label, fontWeight = "bold" }),
+      ui.spacer({ flexGrow = 1 }),
+      ui.button({
+        key = "new-prompt",
+        text = "New prompt",
+        glyph = "plus",
+        variant = "secondary",
+        onClick = function()
+          ui_state.output = nil
+          ui_state.error = nil
+          ui_state.prompt = ""
+          render()
+        end,
+      }),
+      ui.button({ key = "close", text = "Close", variant = "ghost", onClick = function()
+        panel.close()
+      end }),
+    }),
+  }
+
+  if ui_state.prompt ~= "" then
+    table.insert(children, ui.label({
+      text = "› " .. ui_state.prompt,
+      color = "on_surface/0.6",
+      fontSize = 12,
+      maxLines = 1,
+    }))
+  end
+
+  if ui_state.busy then
+    local elapsed = 0
+    if ui_state.startedAt ~= nil then
+      elapsed = math.floor((noctalia.nowMs() - ui_state.startedAt) / 1000)
+    end
+    table.insert(children, ui.column({ flexGrow = 1, align = "center", justify = "center", gap = 8 }, {
+      ui.glyph({ name = "loader-2", size = 26, color = "primary" }),
+      ui.label({ text = string.format("%s is working… %ds", label, elapsed), color = "on_surface/0.7" }),
+      ui.label({ text = "Esc closes · the run continues", color = "on_surface/0.4", fontSize = 12 }),
+    }))
+  else
+    -- No stickToBottom: an answer arrives all at once, so the reader wants the top of it.
+    table.insert(children, ui.scroll({ flexGrow = 1 }, {
+      ui.markdown({ text = ui_state.output or "" }),
+    }))
+  end
+
+  if ui_state.error ~= nil then
+    table.insert(children, ui.label({ text = ui_state.error, color = "error", fontSize = 12 }))
+  end
+
+  panel.render(ui.column({ padding = 16, gap = 12, flexGrow = 1 }, children))
+end
+
 function render()
+  local activeEntry = current()
+  local activeLabel = activeEntry ~= nil and activeEntry.adapter.label or ui_state.agentId
+  if ui_state.output ~= nil or ui_state.busy then
+    renderResult(activeEntry, activeLabel)
+    return
+  end
+
   local children = {}
 
   -- Agent chips
@@ -277,15 +354,14 @@ function render()
   end
   table.insert(children, ui.label({ text = hint, color = "on_surface/0.6", fontSize = 12 }))
 
-  -- One-shot output
-  if ui_state.output ~= nil and ui_state.output ~= "" then
-    table.insert(children, ui.separator({}))
-    table.insert(children, ui.scroll({ flexGrow = 1, stickToBottom = true }, {
-      ui.markdown({ text = ui_state.output }),
-    }))
-  end
-
   panel.render(ui.column({ padding = 16, gap = 12, flexGrow = 1 }, children))
+end
+
+-- Panels receive update() on the configured interval; use it to advance the elapsed counter.
+function update()
+  if ui_state.busy then
+    render()
+  end
 end
 
 -- ── lifecycle ────────────────────────────────────────────────────────────────

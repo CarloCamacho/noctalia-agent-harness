@@ -32,3 +32,9 @@ Initial scaffold, built on a completed Phase 0 feasibility pass
   Alt+Enter in the composer failed with *"Missing prompt file"*. Both call sites now pass it, and
   the wiring is pinned by `tests/test_panel.py` (29 tests total). Verified live: Enter opened a
   floating terminal with the prompt submitted, and Alt+Enter returned the answer with no window.
+- One-shot answers were unreadable: the panel was 360px tall, so after the composer rows the
+  output scroll had roughly 30px, and `stickToBottom` pinned the view to the *end* of the answer.
+  The panel is now 560px, and once a run starts the composer collapses into a result view whose
+  scroll region takes the remaining height and starts at the top. A live elapsed counter replaces
+  the static "running…" label. `tests/lua/` adds a stubbed-host harness that asserts the real
+  render trees (18 assertions).
