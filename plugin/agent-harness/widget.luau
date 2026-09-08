@@ -34,7 +34,14 @@ local function render()
     colour = "on_surface"
   end
 
-  local children = { ui.glyph({ name = agent and agent.glyph or "robot", size = 15, color = colour }) }
+  -- Per-instance glyph override; empty means "follow the agent's own glyph".
+  local override = noctalia.getConfig("glyph")
+  if type(override) ~= "string" or override == "" then
+    override = nil
+  end
+  local glyphName = override or (agent and agent.glyph) or "robot"
+
+  local children = { ui.glyph({ name = glyphName, size = 15, color = colour }) }
   if showLabel then
     table.insert(children, ui.label({ text = agent and agent.label or id, color = colour }))
   end

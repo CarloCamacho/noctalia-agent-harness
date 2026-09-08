@@ -17,5 +17,7 @@
   "settings.approve_project_files.label": "Trust project files",
   "settings.approve_project_files.description": "Off by default. Passing --approve lets Pi act on project-local instructions without asking.",
   "settings.widget.agent.label": "Agent for this widget",
-  "settings.widget.show_label.label": "Show agent name"
+  "settings.widget.show_label.label": "Show agent name",
+  "settings.widget.glyph.label": "Icon",
+  "settings.widget.glyph.description": "Leave empty to use the agent's own icon."
 }

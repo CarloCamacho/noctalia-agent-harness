@@ -19,7 +19,12 @@ H.config = {
   float_width = 900,
   float_height = 600,
   approve_project_files = false,
+  show_label = false,
+  glyph = "",
+  agent = "pi",
 }
+
+H.stateValue = nil
 
 H.env = { HOME = "/home/tester", PATH = "/usr/bin:/bin" }
 H.tree = nil
@@ -135,7 +140,7 @@ function H.install(plugin_dir)
     end,
     state = {
       get = function()
-        return nil
+        return H.stateValue
       end,
       set = noop,
       watch = noop,

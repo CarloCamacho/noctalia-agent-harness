@@ -108,6 +108,15 @@ entry = "widget.luau"
   label_key = "settings.widget.show_label.label"
   default   = false
 
+  # Optional per-instance glyph. Empty means "use the agent's own glyph" (π for Pi,
+  # sparkles for Hermes).
+  [[widget.setting]]
+  key             = "glyph"
+  type            = "glyph"
+  label_key       = "settings.widget.glyph.label"
+  description_key = "settings.widget.glyph.description"
+  default         = ""
+
 [[panel]]
 id                       = "compose"
 entry                    = "panel.luau"

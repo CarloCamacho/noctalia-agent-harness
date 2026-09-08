@@ -38,3 +38,6 @@ Initial scaffold, built on a completed Phase 0 feasibility pass
   scroll region takes the remaining height and starts at the top. A live elapsed counter replaces
   the static "running…" label. `tests/lua/` adds a stubbed-host harness that asserts the real
   render trees (18 assertions).
+- The bar widget used the generic `terminal-2` icon for Pi. Pi now defaults to `math-pi` (π), and
+  each widget instance can override the icon with the new `glyph` setting. Widget render tests
+  added (`tests/lua/widget_render_test.lua`).

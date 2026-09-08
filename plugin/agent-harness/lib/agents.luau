@@ -24,7 +24,7 @@ M.adapters = {
   pi = {
     id = "pi",
     label = "Pi",
-    glyph = "terminal-2",
+    glyph = "math-pi",
     detect = "pi",
     verified = true,
     -- The prompt is appended as `"$(cat '<file>')"` by launch.luau.
