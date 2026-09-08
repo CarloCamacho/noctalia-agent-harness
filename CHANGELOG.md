@@ -28,3 +28,7 @@ Initial scaffold, built on a completed Phase 0 feasibility pass
   (`uwsm-app -- kitty --class … -e …`) for interactive launches, and skips the terminal only
   for one-shot runs. Exec'ing the agent bare produced no window.
 - Regression tests for all three (25 tests total).
+- The panel did not forward the prompt-file path into `launchOptions()`, so pressing Enter or
+  Alt+Enter in the composer failed with *"Missing prompt file"*. Both call sites now pass it, and
+  the wiring is pinned by `tests/test_panel.py` (29 tests total). Verified live: Enter opened a
+  floating terminal with the prompt submitted, and Alt+Enter returned the answer with no window.

@@ -66,8 +66,10 @@ end
 
 -- ── launch ───────────────────────────────────────────────────────────────────
 
-local function launchOptions(oneShot)
+-- promptFile is written by the caller; launch.compose rejects an options table without it.
+local function launchOptions(oneShot, promptFile)
   return {
+    promptFile = promptFile,
     cwd = launch.expandCwd(ui_state.cwd),
     terminal = noctalia.getConfig("terminal") or "kitty",
     windowClass = noctalia.getConfig("window_class") or "agent-harness",
@@ -100,7 +102,7 @@ local function doLaunch()
     return setError(perr)
   end
 
-  local scriptPath, serr = launch.writeLaunchScript(entry.adapter, launchOptions(false), entry.path)
+  local scriptPath, serr = launch.writeLaunchScript(entry.adapter, launchOptions(false, promptFile), entry.path)
   if scriptPath == nil then
     return setError(serr)
   end
@@ -132,7 +134,7 @@ local function doOneShot()
     return setError(perr)
   end
 
-  local scriptPath, serr = launch.writeLaunchScript(entry.adapter, launchOptions(true), entry.path)
+  local scriptPath, serr = launch.writeLaunchScript(entry.adapter, launchOptions(true, promptFile), entry.path)
   if scriptPath == nil then
     return setError(serr)
   end
