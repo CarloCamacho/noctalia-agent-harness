@@ -1,6 +1,6 @@
 """Tests for the adapter table and the Hyprland helpers.
 
-Mirrors `plugin/agent_harness/lib/agents.luau` and the Hyprland portion of `lib/launch.luau`.
+Mirrors `plugin/agent-harness/lib/agents.luau` and the Hyprland portion of `lib/launch.luau`.
 
 Run from the repo root:  python3 -m unittest -v tests.test_agents
 """
@@ -10,7 +10,7 @@ import re
 import unittest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AGENTS_LUA = os.path.join(REPO, "plugin", "agent_harness", "lib", "agents.luau")
+AGENTS_LUA = os.path.join(REPO, "plugin", "agent-harness", "lib", "agents.luau")
 
 # Observed live: /home/ian/work/agent-harness/scratch
 #   -> ~/.pi/agent/sessions/--home-ian-work-agent-harness-scratch--/

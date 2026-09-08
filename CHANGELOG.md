@@ -15,3 +15,16 @@ Initial scaffold, built on a completed Phase 0 feasibility pass
 - One-shot path on `Alt+Enter` (`pi --print`, `hermes -z`) rendering the answer in the panel.
 - Configurable bar module, one instance per agent, scroll to switch.
 - Age-based sweep of generated prompt and launch files.
+- Live end-to-end verified: hotkey → composer → floating kitty → Pi seeded → answer.
+
+### Fixed after live testing
+
+- Service now initialises at script load as well as in `onEnable()` — hot reload does not call
+  `onEnable()`, which left the adapter table empty and rejected every launch.
+- Agent resolution now searches known per-user directories, then a probed login-shell PATH,
+  then the daemon PATH. The Noctalia daemon runs with a bare system PATH, and its `sh -lc`
+  does not source fish config, so the probe must augment rather than replace the list.
+- The generated launch script now wraps the agent in the configured terminal
+  (`uwsm-app -- kitty --class … -e …`) for interactive launches, and skips the terminal only
+  for one-shot runs. Exec'ing the agent bare produced no window.
+- Regression tests for all three (25 tests total).

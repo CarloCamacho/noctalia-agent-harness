@@ -80,29 +80,55 @@ local function detectRunning()
   end
 end
 
+-- The daemon's PATH is a bare system PATH, so agent binaries under ~/.local/bin or the Pi
+-- Node runtime are invisible to it. Ask a login shell for the real PATH once, then re-resolve.
+local function probeLoginPath()
+  noctalia.runAsync({ "sh", "-lc", 'printf %s "$PATH"' }, function(result)
+    if result == nil or result.exitCode ~= 0 then
+      noctalia.log("PATH probe failed; falling back to known user directories")
+      return
+    end
+    local value = (result.stdout or ""):gsub("%s+$", "")
+    if value == "" then
+      return
+    end
+    launch.setSearchPath(value)
+    resolveAdapters()
+    publish()
+    noctalia.log("adapters re-resolved from the login-shell PATH")
+  end, 10000)
+end
+
 -- Shared launch path for the `launch` IPC event. The panel composes its own launch from the
 -- same lib functions; this exists for keybinds and scripts.
 local function performLaunch(req)
   if type(req) ~= "table" then
+    noctalia.log("launch: bad payload")
     return false, "bad payload"
   end
   local agentId = req.agent or config.defaultAgent
   local entry = resolved[agentId]
   if entry == nil then
+    noctalia.log("launch: unknown agent " .. tostring(agentId))
     return false, "unknown agent: " .. tostring(agentId)
   end
   if not entry.available then
+    noctalia.log("launch: " .. tostring(agentId) .. " not installed")
     return false, entry.adapter.label .. " is not installed"
   end
 
   local promptFile, perr = launch.writePromptFile(tostring(req.prompt or ""))
   if promptFile == nil then
+    noctalia.log("launch: prompt file failed: " .. tostring(perr))
     return false, perr
   end
+  noctalia.log("launch: prompt file " .. promptFile)
 
   local opts = {
     promptFile = promptFile,
     cwd = req.cwd or config.defaultCwd,
+    terminal = config.terminal,
+    windowClass = config.windowClass,
     model = req.model,
     provider = req.provider,
     thinking = req.thinking,
@@ -113,12 +139,15 @@ local function performLaunch(req)
 
   local scriptPath, serr = launch.writeLaunchScript(entry.adapter, opts, entry.path)
   if scriptPath == nil then
+    noctalia.log("launch: script failed: " .. tostring(serr))
     return false, serr
   end
+  noctalia.log("launch: script " .. scriptPath .. " -> " .. table.concat(launch.launchArgv(scriptPath), " "))
 
   applyWindowRule()
   noctalia.runAsync(launch.launchArgv(scriptPath), function(result)
     if result ~= nil and result.exitCode ~= 0 then
+      noctalia.log("launch: hyprctl failed: " .. tostring(result.stderr or ""))
       noctalia.notifyError("Agent Harness", "launch failed: " .. tostring(result.stderr or ""))
     end
   end, 5000)
@@ -153,6 +182,7 @@ function onEnable()
   applyWindowRule()
   launch.sweepAll()
   publish()
+  probeLoginPath()
 end
 
 function onConfigChanged()
@@ -173,18 +203,33 @@ function onExit(_signal, reason)
 end
 
 function onIpc(event, payload)
-  if event == state.EVENT_REFRESH then
-    resolveAdapters()
-    publish()
-  elseif event == state.EVENT_SWEEP then
-    launch.sweepAll()
-  elseif event == state.EVENT_LAUNCH then
-    local req = decodePayload(payload)
-    local ok, err = performLaunch(req)
-    if not ok then
-      noctalia.notifyError("Agent Harness", tostring(err))
+  local ok, err = pcall(function()
+    if event == state.EVENT_REFRESH then
+      resolveAdapters()
+      publish()
+    elseif event == state.EVENT_SWEEP then
+      launch.sweepAll()
+    elseif event == state.EVENT_LAUNCH then
+      local req = decodePayload(payload)
+      local launched, lerr = performLaunch(req)
+      if not launched then
+        noctalia.notifyError("Agent Harness", tostring(lerr))
+      end
     end
+  end)
+  if not ok then
+    noctalia.log("ipc error: " .. tostring(err))
+    noctalia.notifyError("Agent Harness", tostring(err))
   end
 end
+
+-- Initialise at load, not only in onEnable: a hot reload re-evaluates the script without
+-- calling onEnable, and a service with an empty adapter table would reject every launch.
+reloadConfig()
+resolveAdapters()
+applyWindowRule()
+launch.sweepAll()
+publish()
+probeLoginPath()
 
 noctalia.setUpdateInterval(5000)

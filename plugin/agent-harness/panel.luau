@@ -69,6 +69,8 @@ end
 local function launchOptions(oneShot)
   return {
     cwd = launch.expandCwd(ui_state.cwd),
+    terminal = noctalia.getConfig("terminal") or "kitty",
+    windowClass = noctalia.getConfig("window_class") or "agent-harness",
     model = ui_state.model,
     provider = ui_state.provider,
     thinking = ui_state.thinking,

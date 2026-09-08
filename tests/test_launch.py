@@ -1,6 +1,6 @@
 """Tests for the launch-composition rules.
 
-These mirror `plugin/agent_harness/lib/launch.luau`. The quoting test does not merely compare
+These mirror `plugin/agent-harness/lib/launch.luau`. The quoting test does not merely compare
 strings: it round-trips each hostile input through a real POSIX shell, which is the property
 that actually matters. If Luau tooling becomes available in CI these cases should run against
 the Luau implementation directly.
@@ -15,7 +15,7 @@ import tempfile
 import unittest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LAUNCH_LUA = os.path.join(REPO, "plugin", "agent_harness", "lib", "launch.luau")
+LAUNCH_LUA = os.path.join(REPO, "plugin", "agent-harness", "lib", "launch.luau")
 
 # Inputs a user could plausibly type into a prompt box.
 HOSTILE = [
@@ -142,3 +142,58 @@ class TestSourceInvariants(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTerminalWrap(unittest.TestCase):
+    """Regression: the launch script must wrap the agent in the terminal (bug found live).
+
+    Exec'ing the agent directly produced a prompt file and a script but no window, because
+    nothing allocated a TTY.
+    """
+
+    def setUp(self):
+        with open(LAUNCH_LUA, encoding="utf-8") as handle:
+            self.source = handle.read()
+
+    def test_script_wraps_interactive_launches_in_the_terminal(self):
+        self.assertIn("M.terminalArgv", self.source)
+        self.assertIn("opts.oneShot", self.source)
+
+    def test_terminal_wrap_carries_class_and_directory(self):
+        # Mirror of M.terminalArgv for kitty.
+        cls = "agent-harness"
+        cwd = "/home/ian/work"
+        argv = ["kitty", "--class", cls, "--directory", cwd, "-e", "pi", '"$(cat \'/p.txt\')"']
+        line = "exec " + shell_argv(argv[:-1]) + " " + argv[-1]
+        self.assertIn("'--class' 'agent-harness'", line)
+        self.assertIn("'--directory' '/home/ian/work'", line)
+        self.assertIn("'-e' 'pi'", line)
+
+    def test_one_shot_is_not_wrapped(self):
+        # The one-shot path captures stdout, so a terminal would swallow it.
+        marker = "if opts.oneShot then"
+        self.assertIn(marker, self.source)
+        branch = self.source.split(marker, 1)[1].split("else", 1)[0]
+        self.assertNotIn("terminalArgv", branch)
+
+
+class TestSearchPathMerge(unittest.TestCase):
+    """Regression: a probed PATH must augment, not replace, the known user directories.
+
+    The daemon's `sh -lc` does not source fish config, so the probe can be narrower than the
+    real user PATH; replacing the list made every agent unresolvable.
+    """
+
+    def setUp(self):
+        with open(LAUNCH_LUA, encoding="utf-8") as handle:
+            self.source = handle.read()
+
+    def test_known_user_dirs_are_searched_before_the_probe(self):
+        body = self.source.split("function M.searchDirs()", 1)[1]
+        local_bin = body.index(".local/bin")
+        probe = body.index("probedPath")
+        self.assertLess(local_bin, probe, "known dirs must be added before the probed PATH")
+
+    def test_probe_does_not_early_return(self):
+        body = self.source.split("function M.searchDirs()", 1)[1].split("\nend", 1)[0]
+        self.assertNotIn("return dirs", body.split("probedPath", 1)[0].split("if probedPath")[-1])

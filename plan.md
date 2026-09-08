@@ -113,18 +113,18 @@ deleting files older than 10 minutes. Sweep is idempotent and unit-tested.
 
 ```
 agent-harness/
-  plugin/agent_harness/plugin.toml
-  plugin/agent_harness/service.luau
-  plugin/agent_harness/widget.luau
-  plugin/agent_harness/panel.luau
-  plugin/agent_harness/lib/agents.luau
-  plugin/agent_harness/lib/launch.luau
-  plugin/agent_harness/lib/sessions.luau
-  plugin/agent_harness/lib/state.luau
-  plugin/agent_harness/translations/en.json
-  plugin/agent_harness/README.md
-  plugin/agent_harness/CHANGELOG.md
-  plugin/agent_harness/thumbnail.webp
+  plugin/agent-harness/plugin.toml
+  plugin/agent-harness/service.luau
+  plugin/agent-harness/widget.luau
+  plugin/agent-harness/panel.luau
+  plugin/agent-harness/lib/agents.luau
+  plugin/agent-harness/lib/launch.luau
+  plugin/agent-harness/lib/sessions.luau
+  plugin/agent-harness/lib/state.luau
+  plugin/agent-harness/translations/en.json
+  plugin/agent-harness/README.md
+  plugin/agent-harness/CHANGELOG.md
+  plugin/agent-harness/thumbnail.webp
   tests/test_launch.py      # command composition, hostile prompts, temp-file lifecycle
   tests/test_agents.py      # adapter contract, capability gating
   docs/ipc-contract.md

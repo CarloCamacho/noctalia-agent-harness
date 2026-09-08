@@ -1,58 +1,66 @@
-# noctalia-agent-harness
+<div align="center">
 
-**Hotkey a chat bar, type a request, press Enter — and a terminal pops out running Pi (or
-Hermes) with your prompt already submitted.**
+# ⚡ Agent Harness
 
-A [Noctalia v5](https://noctalia.dev) plugin. This repository is the upstream source of truth;
-the plugin id is `carlocamacho/agent-harness`.
+**Hotkey a chat bar. Type the task. Press Enter.**
+
+A terminal pops out — Pi or Hermes already running, your prompt already submitted.
+
+<br>
+
+[![Noctalia](https://img.shields.io/badge/Noctalia-v5-8b5cf6?style=flat-square)](https://noctalia.dev)
+[![plugin_api](https://img.shields.io/badge/plugin__api-24-22c55e?style=flat-square)](#)
+[![Hyprland](https://img.shields.io/badge/Hyprland-0.55%2B-58e1ff?style=flat-square)](https://hypr.land)
+[![tests](https://img.shields.io/badge/tests-25%20passing-22c55e?style=flat-square)](#verification)
+[![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
+<br>
 
 ```
-SUPER+P  →  composer opens, focused  →  type  →  Enter  →  floating kitty running Pi
-                                                       Alt+Enter  →  answer in the panel
+   ⌨  SUPER + P
+        │
+        ▼
+  ┌──────────────────────────────────────────────┐
+  │  ✦  What should Pi do?                       │
+  │  ▏  refactor my hyprland binds…              │
+  │                                              │
+  │  [ Pi ] [ Hermes ]    ~/work    model…       │
+  │  ⏎ open terminal     ⌥⏎ answer here          │
+  └──────────────────────────────────────────────┘
+        │  Enter
+        ▼
+  ╭──────────────────────────────────────────────╮
+  │  π   ~/work            deepseek • high       │
+  │                                              │
+  │  ›  refactor my hyprland binds…              │
+  │  ●  reading config/binds.lua                 │
+  ╰──────────────────────────────────────────────╯
 ```
+
+</div>
 
 ---
 
-## Status
+## Why this exists
 
-**v0.1.0 scaffold, built on a completed Phase 0.** Every load-bearing assumption was verified
-against the real binaries and compositor on CachyOS / Hyprland 0.56.2 — see
-[`docs/phase0-findings.md`](docs/phase0-findings.md). Highlights:
+Every agent CLI is already excellent. What's missing is the **first five seconds**: getting from
+"idea" to "agent working, in the right directory, with the right context" without opening a
+terminal, `cd`-ing somewhere, and typing the prompt again.
 
-| Verified | Result |
+Agent Harness is that missing doorway. One chord, one box, one Enter — and you're in.
+
+## The flow
+
+| | |
 | --- | --- |
-| `pi "<prompt>"` seeds an interactive session | **Yes** — the prompt lands as the first user message in the session JSONL |
-| `pi -p` / `hermes -z` one-shot | **Yes** — both print the answer and exit 0 |
-| `hermes chat --query-file <file>` | **Yes** — byte-identical, never shell-interpreted |
-| `hyprctl dispatch 'hl.dsp.exec_cmd("…")'` | **Yes** — and the string *is* shell-interpreted |
-| Runtime floating window rule | **Yes** — `hyprctl eval 'hl.window_rule(…)'` produced a centered 900×600 floating window |
-| `capture_keys` grammar | Super is rejected; **Escape is host-reserved** and cannot be captured |
-| `runInTerminal` | Wraps as `<terminal> -e sh -lc "<cmd>"`, applies no window rules |
+| **⌨ `SUPER+P`** | The composer opens, keyboard-focused, over whatever you were doing |
+| **⏎ `Enter`** | Writes the prompt to a private file and pops out a floating terminal running the selected agent |
+| **⌥⏎ `Alt+Enter`** | Runs the agent's print mode and renders the answer *inside the panel* — no window |
+| **`Esc`** | Dismisses the panel (Noctalia owns this key; a plugin can't take it) |
+| **🖱 click / scroll** | Toggle the composer / cycle the agent on that bar module |
 
-## How it works
-
-```
-panel (composer)                     service
-  │                                    │
-  ├─ write prompt  → prompts/<id>.txt  ├─ resolve adapters (PATH scan)
-  ├─ write script  → launch/<id>.sh    ├─ apply Hyprland window rule
-  └─ hyprctl dispatch                  ├─ detect running agents
-       'hl.dsp.exec_cmd("sh <script>")' └─ sweep generated files
-                 │
-                 ▼
-   script:  PATH=<agent runtime>:… ; cd <cwd> ; exec <agent> "$(cat <prompt>)"
-```
-
-**The prompt never enters a command string.** It is written to a `0600` file, and the command
-reaching the shell contains only generated paths and validated enums:
-
-- Pi (`cat-file`): `exec pi … "$(cat '<promptFile>')"` — command substitution, so the text is
-  data, never parsed.
-- Hermes (`flag-file`): `exec hermes chat --query-file '<promptFile>'` — documented as
-  shell-free transport.
-
-Generated files are swept by age (10 minutes) on plugin enable and before each launch. They are
-**never** deleted immediately after launch, because the shell may not have read them yet.
+Pick the agent with a chip, set the working directory, add a model, and optionally resume the
+last session in that directory — then get out of the way.
 
 ## Install
 
@@ -61,67 +69,112 @@ noctalia msg plugins source add carlocamacho git https://github.com/CarloCamacho
 noctalia msg plugins enable carlocamacho/agent-harness
 ```
 
-Or drop the plugin directory under `~/.local/share/noctalia/plugins/agent_harness/` and enable it
-from **Settings → Plugins**.
-
-Then bind the composer (see [`docs/hyprland-bind.md`](docs/hyprland-bind.md)):
+Then bind it in `~/.config/hypr/config/binds.lua`:
 
 ```lua
--- ~/.config/hypr/config/binds.lua  (Hyprland 0.55+ Lua config)
-hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("noctalia msg panel-toggle carlocamacho/agent-harness:compose"),
-        { description = "Agent Harness composer" })
+hl.bind(mainMod .. " + P",
+  hl.dsp.exec_cmd("noctalia msg panel-toggle carlocamacho/agent-harness:compose"),
+  { description = "Agent Harness composer" })
 ```
 
-## Usage
+<details>
+<summary>Requirements</summary>
 
-| Action | Result |
+| | |
 | --- | --- |
-| Hotkey | Opens the composer, keyboard-focused |
-| Enter | Opens a floating terminal running the selected agent with the prompt submitted |
-| Alt+Enter | Runs the agent's print mode and renders the answer inside the panel |
-| Escape | Dismisses the panel (handled by Noctalia — a plugin cannot capture it) |
-| Click the bar module | Toggles the composer |
-| Scroll the bar module | Cycles the agent for that instance |
+| Noctalia v5 | `plugin_api >= 24` |
+| Hyprland 0.55+ | Lua config (`hl.dsp.exec_cmd`, `hl.window_rule`) |
+| A terminal | `kitty` (verified default), Ghostty, or Alacritty |
+| An agent | `pi` and/or `hermes` on `PATH` |
+
+</details>
+
+## How it works
+
+```
+   panel ── composer                    service ── the rest
+     │                                    │
+     ├─ prompt   →  prompts/<token>.txt   ├─ resolve agents (PATH scan)
+     ├─ script   →  launch/<token>.sh     ├─ apply the window rule
+     └─ hyprctl dispatch                  ├─ detect running agents
+          'hl.dsp.exec_cmd("sh …")'       └─ sweep generated files
+                 │
+                 ▼
+   PATH=<agent runtime>:… ; cd <cwd> ; uwsm-app -- kitty --class agent-harness -e <agent> "$(cat <prompt>)"
+```
+
+**The prompt never enters a command string.** It goes to a `0600` file, and the command that
+reaches the shell contains only generated paths and validated enums:
+
+| Delivery | Shape | Used by |
+| --- | --- | --- |
+| `cat-file` | `… pi "$(cat '<file>')"` | Pi |
+| `flag-file` | `… hermes chat --query-file '<file>'` | Hermes |
+
+`$(cat …)` is command substitution producing one argument — the file's contents are *data*,
+never parsed. Generated files are swept after 10 minutes, never immediately after launch (the
+shell may not have read them yet).
+
+## Verification
+
+This plugin was built on a completed Phase 0 that ran against the real binaries and compositor.
+The findings live in [`docs/phase0-findings.md`](docs/phase0-findings.md).
+
+| Assumption | Result |
+| --- | --- |
+| `pi "<prompt>"` seeds an interactive session | ✅ confirmed in Pi's session JSONL |
+| `hermes chat --query-file` is shell-free | ✅ byte-exact, upstream-tested |
+| `hyprctl dispatch 'hl.dsp.exec_cmd(…)'` | ✅ works, and *is* shell-interpreted |
+| Runtime floating window rule | ✅ 900×600 centered, on the active workspace |
+| `capture_keys` grammar | ⚠️ Super rejected; **Escape is host-reserved** |
+| The daemon's PATH has the agent runtime | ❌ it does not — resolved with a merged search path |
+
+Live testing caught three bugs that source reading alone missed: `onEnable` isn't called on hot
+reload, the daemon's PATH is bare, and the launch script has to wrap the agent *in* the terminal.
+All three are fixed and pinned by regression tests.
+
+```bash
+python3 -m unittest discover -s tests    # 25 tests
+luac5.4 -p plugin/agent-harness/*.luau   # syntax
+```
 
 ## Settings
 
-Plugin-level: default agent, terminal, default working directory, window class, float toggle,
-float size, and **Trust project files** (off by default — it passes `--approve` to Pi, which lets
-it act on project-local instructions without asking; only enable it in directories you trust).
+| Setting | Default | Notes |
+| --- | --- | --- |
+| Default agent | Pi | Which chip is preselected |
+| Terminal | kitty | The pop-out terminal |
+| Default working directory | `~/work` | Pi keeps a separate session per directory |
+| Window class | `agent-harness` | Matches the generated window rule |
+| Float the pop-out window | on | Centered, current workspace |
+| Window width / height | 900 × 600 | |
+| Trust project files | **off** | Passes `--approve` to Pi — enable only in directories you trust |
 
 Per-widget: which agent that instance represents, and whether to show its name.
 
-## Layout
-
-```
-plugin/agent_harness/
-  plugin.toml            manifest (plugin_api 24; capture_keys = ["alt+Return"])
-  service.luau           adapter resolution, window rule, running state, cleanup
-  widget.luau            configurable bar module
-  panel.luau             the composer and the only launcher
-  lib/agents.luau        adapter table — the extension seam (Pi, Hermes)
-  lib/launch.luau        quoting, script generation, hyprctl argv, sweep
-  lib/sessions.luau      per-cwd session discovery
-  lib/state.luau         state keys and schema version
-  translations/en.json
-docs/                    Phase 0 findings, IPC contract, keybind guide
-tests/                   Python mirrors of the composition rules
-```
-
 ## Adding an agent
 
-`lib/agents.luau` is a table. An adapter declares `detect`, `delivery`
-(`cat-file` / `flag-file`), `capabilities`, `build(opts)`, `oneShot(opts)`, and an optional
-`sessionDir`. Nothing else changes: the panel renders only the capabilities an adapter declares,
-and `lib/agents.luau` rejects any adapter whose fixed argv contains shell metacharacters.
+`lib/agents.luau` is a table. Declare `detect`, `delivery`, `capabilities`, `build(opts)`,
+`oneShot(opts)`, and an optional `sessionDir`. The panel renders only the capabilities you
+declare, and the validator rejects any adapter whose fixed argv contains shell metacharacters.
+
+```lua
+claude = {
+  id = "claude", label = "Claude Code", glyph = "brain", detect = "claude",
+  delivery = "cat-file", verified = false,
+  capabilities = { model = true, continue = true },
+  build = function(opts) return { "claude" } end,
+}
+```
 
 ## Roadmap
 
-- Third adapter (DSH needs profile enumeration first — `dsh --profile tui` does not exist here).
-- Session picker beyond "continue last in this cwd".
-- Attach files to Pi with `@file` via a panel drop zone.
-- Streaming agent output into the panel (Pi exposes `--mode rpc`; Hermes exposes an ACP adapter).
+- [ ] Third adapter (DSH needs profile enumeration — `dsh --profile tui` doesn't exist yet)
+- [ ] Session picker beyond "continue last in this cwd"
+- [ ] Drop a file onto the panel to attach it with Pi's `@file`
+- [ ] Stream agent output into the panel (Pi has `--mode rpc`; Hermes has an ACP adapter)
 
-## License
-
-MIT — see [`LICENSE`](LICENSE).
+<div align="center">
+<br>
+<sub>MIT · built for <a href="https://noctalia.dev">Noctalia v5</a> on Hyprland</sub>
+</div>

@@ -66,8 +66,29 @@ but with the prompt seeded and the class owned by the plugin so its window rule 
 | Hermes interactive seeding | Verified by source + upstream test + documented TTY gate, not by a live PTY run. Same delivery transport as one-shot, which is live-verified |
 | Window rule persistence across Hyprland reload | Runtime rules are not persisted; the plugin re-applies on enable and before each launch |
 
-## 5. Cleanup performed
+## 5. Live integration findings (after install)
 
-Phase 0 created and then removed: scratch marker-prompt files, one Pi marker session
-(`~/.pi/agent/sessions/--home-ian-work-agent-harness-scratch--/`), and two short-lived test
-windows. No user session or configuration was modified.
+The plugin was installed into the `carlo-local` path source
+(`/home/ian/noctalia-sources/agent-harness` → symlink to this repo's plugin directory) and
+driven end to end. Three bugs surfaced that no amount of source reading would have caught.
+
+| # | Symptom | Cause | Fix |
+| --- | --- | --- | --- |
+| 15 | Every launch failed with `unknown agent: pi` after the first hot reload | `onEnable()` is **not** called on hot reload, so the adapter table was empty | Initialise at script top level as well as in `onEnable()` |
+| 16 | Then `pi not installed`, even though it resolved from a shell | The Noctalia daemon's PATH is the bare system PATH (`/usr/local/sbin:/usr/local/bin:/usr/bin:…`) — no `~/.local/bin`, no pi-node | Search known per-user dirs first, then a probed login-shell PATH, then the daemon PATH |
+| 17 | Prompt file and launch script were written, but no window appeared | The script exec'd the agent directly; nothing wrapped it in a terminal | The script now wraps the agent in the configured terminal (`uwsm-app -- kitty --class … -e …`) for interactive launches, and bypasses the terminal only for one-shot |
+
+Also learned: the daemon's `sh -lc` does **not** source fish config, so the probed PATH can be
+*narrower* than the user's real PATH. The probe therefore augments the search list rather than
+replacing it — replacing it was the second version of bug #16.
+
+**End-to-end result:** `noctalia msg plugin carlocamacho/agent-harness:service all launch`
+produced a floating, centered 900×600 kitty window on the active workspace running Pi in the
+requested directory, with the prompt submitted as the first turn and `LIVE-OK` returned. The
+test window, session, and generated files were then removed.
+
+## 6. Cleanup performed
+
+Phase 0 created and then removed: scratch marker-prompt files, two Pi marker sessions
+(`~/.pi/agent/sessions/--home-ian-work-agent-harness-scratch--/`), the live-test window, and the
+generated prompt/launch files. No user session or configuration was modified.
